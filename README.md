@@ -1,6 +1,8 @@
-# Trabalho Final de Estatistica com Linguagem R
+# Projeto em Linguagem R
+
 - Universidade Nove de Julho
-Destinado ao Projeto de Inteligência Artificial com linguagem Python.
+
+Destinado ao trabalho final do módulo de Linguagem R.
 
 Ministrado pelo Professor - Jose Eduardo Storopoli
 
