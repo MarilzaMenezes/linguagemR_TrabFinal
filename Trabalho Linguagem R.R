@@ -18,6 +18,21 @@ dados %>%
   summarise(soma_valor = sum(PRCMEDIOREV))
 
 
+dados$PRCMEDISTR <- as.numeric(dados$PRCMEDISTR)
+
+#dados <- dados %>%
+# sample_n(size = nrow(.)*0.5)
+
+dados$PRCMEDISTR[dados$PRCMEDISTR == "NA"] <- NA
+dados$PRCMEDISTR <- as.numeric(dados$PRCMEDISTR)
+dados <- dados[complete.cases(dados$PRCMEDISTR), ]
+
+dados <- dados %>% 
+  filter(PRCMEDISTR > 0)
+
+dados %>% 
+  mutate(MARGEM_LUCRO = PRCMEDIOREV - PRCMEDISTR)
+
 #Gráfico de barras dos preços médios de revenda por estado, ordenado por preço médio:
 ggplot(dados, aes(x = reorder(ESTADO, PRCMEDIOREV), y = PRCMEDIOREV)) +
   geom_col(fill = "blue") +
@@ -45,3 +60,19 @@ dados %>%
        color = "Região") +
   theme_minimal()
 
+
+ggplot(dados, aes(x = PRCMEDISTR, y = PRCMEDIOREV)) + 
+  geom_point() + 
+  labs(x = "Preço médio de distribuição", y = "Preço médio de revenda")
+
+modelo <- lm(PRCMEDIOREV ~ PRCMEDISTR, data = dados)
+summary(modelo)
+
+ggplot(dados, aes(x = PRCMEDISTR, y = PRCMEDIOREV)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Preço médio de distribuição", y = "Preço médio de revenda")
+
+novo_dado <- data.frame(PRCMEDISTR = 2.50)
+previsao <- predict(modelo, newdata = novo_dado)
+previsao
