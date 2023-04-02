@@ -1,0 +1,126 @@
+---
+title: "Projeto R - Analise estatístico de dataset"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+Conteúdo
+-------------
+
+A Agência Nacional do Petróleo, Gás Natural e Biocombustíveis ( ANP ) divulga relatórios semanais dos preços do gás, diesel e outros combustíveis utilizados no transporte em todo o país. Esses conjuntos de dados trazem o valor médio por litro, número de postos de gasolina analisados e outras informações agrupadas por regiões e estados em todo o país.
+
+Conforme dito anteriormente, esses conjuntos de dados são fornecidos pela ANP e são atualizados regularmente com novas datas e informações - que podem ser acessadas https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/serie-historica-do-levantamento-de-precos   
+
+
+
+* Importando as Bibliotecas:
+```{r}
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library (magrittr)
+library(stringr)
+library(tidyr)
+library(readr)
+```
+
+
+* Fazendo a leitura do DataSet:
+```{r}
+dados <- read_csv2("dataset_preco_gas_brasil.csv", col_names = TRUE)
+```
+
+
+* Apresentando os dados:
+```{r}
+dados 
+```
+
+
+* Antes de começarmos a analisar os dados, vamos fazer a limpeza dos registros N/A, ajustar a coluna que vamos trabalhar para o tipo numérico e por fim filtrar apenas os registros não negativos.
+
+```{r}
+dados$PRCMEDISTR <- as.numeric(dados$PRCMEDISTR)
+dados$PRCMEDISTR[dados$PRCMEDISTR == "NA"] <- NA
+dados$PRCMEDISTR <- as.numeric(dados$PRCMEDISTR)
+dados <- dados[complete.cases(dados$PRCMEDISTR), ]
+
+dados <- dados %>% 
+  filter(PRCMEDISTR > 0)
+```
+
+* Adicionando uma nova coluna definida 'como Margem de Lucro'
+
+```{r}
+dados %>% 
+  mutate(MARGEM_LUCRO = PRCMEDIOREV - PRCMEDISTR) 
+```
+
+### Logo abaixo começaremos a apresentação de alguns gráficos
+
+* Gráfico de barras dos preços médios de revenda por estado, ordenado por preço médio:
+
+```{r}
+ggplot(dados, aes(x = reorder(ESTADO, PRCMEDIOREV), y = PRCMEDIOREV)) +
+  geom_col(fill = "blue") +
+  coord_flip() +
+  labs(x = "Estado", y = "Preço Médio de Revenda (R$/l)") +
+  theme_bw()
+```
+
+
+* Variação do preço médio do produto ao longo do tempo em São Paulo
+
+```{r}
+dados %>%
+  filter(PRODUTO == "GASOLINA COMUM" & ESTADO == "SAO PAULO") %>%
+  mutate(DATA = as.Date(DTINICIAL, "%d/%m/%Y")) %>%
+  ggplot(aes(x = DATA, y = PRCMEDIOREV)) +
+  geom_line(color = "blue") +
+  labs(x = "Data", y = "Preço médio da gasolina", title = "Variação do preço médio da gasolina em São Paulo") +
+  theme_minimal()
+```
+
+
+* Preço medio ao longo do tempo
+```{r}
+dados %>%
+  filter(PRODUTO == "GASOLINA COMUM") %>%
+  select(DTINICIAL, REGIAO, PRCMEDIOREV) %>%
+  mutate(DTINICIAL = as.Date(DTINICIAL, "%d/%m/%Y")) %>%
+  ggplot(aes(x = DTINICIAL, y = PRCMEDIOREV, color = REGIAO)) +
+  geom_jitter() +
+  labs(x = "Data", y = "Preço médio de revenda (R$/l)",
+       color = "Região") +
+  theme_minimal()
+```
+
+* Preço médio de distribuição
+```{r}
+ggplot(dados, aes(x = PRCMEDISTR, y = PRCMEDIOREV)) + 
+  geom_point() + 
+  labs(x = "Preço médio de distribuição", y = "Preço médio de revenda")
+```
+
+### criando o modelo para analise de regressão linear e plotando
+
+```{r}
+modelo <- lm(PRCMEDIOREV ~ PRCMEDISTR, data = dados)
+summary(modelo)
+
+ggplot(dados, aes(x = PRCMEDISTR, y = PRCMEDIOREV)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Preço médio de distribuição", y = "Preço médio de revenda")
+```
+
+* Previsão do modelo:
+```{r}
+novo_dado <- data.frame(PRCMEDISTR = 2.50)
+previsao <- predict(modelo, newdata = novo_dado)
+previsao
+```
